@@ -6,7 +6,7 @@ router.use(require('../middleware/validate-session'));
 router.get('/all', (req, res) => {
     Game.findAll({ where: { owner_id: req.user.id } })
         .then(
-            function findSuccess(data) {
+            function findSuccess(games) {
                 res.status(200).json({
                     games: games,
                     message: "Data fetched."
@@ -25,15 +25,17 @@ router.get('/:id', (req, res) => {
     Game.findOne({ where: { id: req.params.id, owner_id: req.user.id } })
         .then(
             function findSuccess(game) {
-                res.status(200).json({
-                    game: game
-                })
+                if(game){
+                    res.status(200).json({
+                        game: game
+                    })
+                } else {
+                    res.status(404).json({ message: 'Not found'} );
+                }
             },
 
             function findFail(err) {
-                res.status(500).json({
-                    message: "Data not found."
-                })
+                res.status(500).send(err.message)
             }
         )
 })
@@ -41,7 +43,7 @@ router.get('/:id', (req, res) => {
 router.post('/create', (req, res) => {
     Game.create({
         title: req.body.game.title,
-        owner_id: req.body.user.id,
+        owner_id: req.user.id,
         studio: req.body.game.studio,
         esrb_rating: req.body.game.esrb_rating,
         user_rating: req.body.game.user_rating,
@@ -67,20 +69,23 @@ router.put('/update/:id', (req, res) => {
         studio: req.body.game.studio,
         esrb_rating: req.body.game.esrb_rating,
         user_rating: req.body.game.user_rating,
-        have_played: req.body.game.have_played
+        have_played: req.body.game.have_played,
     },
         {
             where: {
                 id: req.params.id,
-                owner_id: req.user
+                owner_id: req.user.id,
             }
         })
         .then(
-            function updateSuccess(game) {
-                res.status(200).json({
-                    game: game,
-                    message: "Successfully updated."
-                })
+            function updateSuccess(count) {
+                if(count > 0) {
+                    res.status(200).json({
+                        message: "Successfully updated."
+                    })
+                }else {
+                    res.status(404).json({ message: 'Not found'} );
+                }
             },
 
             function updateFail(err) {
@@ -100,11 +105,14 @@ router.delete('/remove/:id', (req, res) => {
         }
     })
     .then(
-        function deleteSuccess(game) {
-            res.status(200).json({
-                game: game,
-                message: "Successfully deleted"
-            })
+        function deleteSuccess(count) {
+            if(count > 0) {
+                res.status(200).json({
+                    message: "Successfully deleted"
+                })
+            }else {
+                res.status(404).json({ message: 'Not found'} );
+            }
         },
 
         function deleteFail(err) {

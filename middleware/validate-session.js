@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 var User = require('../db').import('../models/user');
 
 module.exports = function (req, res, next) {
-    if (req.method == 'OPTIONS') {
+    if (req.method === 'OPTIONS') {
         next();   // allowing options as a method for request
     } else {
         var sessionToken = req.headers.authorization;
