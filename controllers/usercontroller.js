@@ -1,10 +1,17 @@
 const router = require("express").Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { ValidationError } = require("sequelize");
 
 const authKey = process.env.AUTH_KEY;
 
 const User = require("../db").import("../models/user");
+
+function setError(res, err) {
+  res.status(500).json({
+    error: err.message,
+  });
+}
 
 router.post("/signup", (req, res) => {
   User.create({
@@ -22,38 +29,49 @@ router.post("/signup", (req, res) => {
         token: token,
       });
     },
-
     function signupFail(err) {
-      res.status(500).send(err.message);
+      if (err instanceof ValidationError) {
+        res.status(400).send(err.message);
+      } else {
+        setError(res, err);
+      }
     }
   );
 });
 
 router.post("/signin", (req, res) => {
-  User.findOne({ where: { username: req.body.user.username } }).then((user) => {
-    if (user) {
-      bcrypt.compare(
-        req.body.user.password,
-        user.passwordHash,
-        function (err, matches) {
-          if (matches) {
-            let token = jwt.sign({ id: user.id }, authKey, {
-              expiresIn: 60 * 60 * 24,
-            });
-            res.json({
-              user: user,
-              message: "Successfully authenticated.",
-              sessionToken: token,
-            });
-          } else {
-            res.status(401).send({ error: "Passwords do not match." });
+  function authFailed() {
+    res.status(401).send({ error: "Signin failed." });
+  }
+  User.findOne({ where: { username: req.body.user.username } }).then(
+    (user) => {
+      if (user) {
+        bcrypt.compare(
+          req.body.user.password,
+          user.passwordHash,
+          function (err, matches) {
+            if (matches) {
+              let token = jwt.sign({ id: user.id }, authKey, {
+                expiresIn: 60 * 60 * 24,
+              });
+              res.status(200).json({
+                user: user,
+                message: "Successfully authenticated.",
+                sessionToken: token,
+              });
+            } else {
+              authFailed();
+            }
           }
-        }
-      );
-    } else {
-      res.status(401).send({ error: "User not found." });
+        );
+      } else {
+        authFailed();
+      }
+    },
+    (err) => {
+      setError(res, err);
     }
-  });
+  );
 });
 
 module.exports = router;

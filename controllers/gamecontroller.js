@@ -3,6 +3,12 @@ const Game = require("../db").import("../models/game");
 
 router.use(require("../middleware/validate-session"));
 
+function setError(res, err) {
+  res.status(500).json({
+    error: err.message,
+  });
+}
+
 router.get("/all", (req, res) => {
   Game.findAll({ where: { owner_id: req.user.id } }).then(
     function findSuccess(games) {
@@ -12,10 +18,8 @@ router.get("/all", (req, res) => {
       });
     },
 
-    function findFail() {
-      res.status(500).json({
-        message: "Data not found",
-      });
+    function findFail(err) {
+      setError(res, err);
     }
   );
 });
@@ -33,7 +37,7 @@ router.get("/:id", (req, res) => {
     },
 
     function findFail(err) {
-      res.status(500).send(err.message);
+      setError(res, err);
     }
   );
 });
@@ -55,7 +59,7 @@ router.post("/create", (req, res) => {
     },
 
     function createFail(err) {
-      res.status(500).send(err.message);
+      setError(res, err);
     }
   );
 });
@@ -87,9 +91,7 @@ router.put("/update/:id", (req, res) => {
     },
 
     function updateFail(err) {
-      res.status(500).json({
-        message: err.message,
-      });
+      setError(res, err);
     }
   );
 });
@@ -112,9 +114,7 @@ router.delete("/remove/:id", (req, res) => {
     },
 
     function deleteFail(err) {
-      res.status(500).json({
-        error: err.message,
-      });
+      setError(res, err);
     }
   );
 });
